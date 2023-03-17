@@ -1,0 +1,1 @@
+# Deployment-and-Monitoring-of-a-django-ecommerce-app-using-a-CICD-Pipeline
