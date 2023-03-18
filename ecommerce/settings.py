@@ -29,7 +29,7 @@ DEBUG = True
 
 #DEBUG = int(os.environ.get("DEBUG", default=0))
 
-ALLOWED_HOSTS = ['209.97.178.125']
+ALLOWED_HOSTS = ['161.35.164.82']
 
 
 # Application definition
