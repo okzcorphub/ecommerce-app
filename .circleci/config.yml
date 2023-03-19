@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  slack: circleci/slack@4.10.1
+  
   aws-cli: circleci/aws-cli@3.1.4
 
 commands:
@@ -128,13 +128,13 @@ jobs:
       - run:
           name: Build Docker image
           command: |
-            docker build -t blogzine-web .
+            docker build -t django-ecommerce-web .
       - run:
           name: Push to Docker Hub
           command: |
             echo "$DOCKER_PASSWORD"
             docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-            docker tag blogzine-web:latest $DOCKER_USERNAME/blogzine-web
+            docker tag blogzine-web:latest $DOCKER_USERNAME/django-ecommerce-web
             docker push $DOCKER_USERNAME/blogzine-web
             
   deploy-blogzine-app:
