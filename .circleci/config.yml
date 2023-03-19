@@ -4,13 +4,6 @@ orbs:
   aws-cli: circleci/aws-cli@3.1.4
 
 commands:
-  notify_on_failure:
-    steps:
-      - slack/notify:
-          event: fail
-          channel: cicd-pipeline
-          template: basic_fail_1
-
   install_awscli:
     description: Install AWS CLI v2
     steps:
@@ -20,17 +13,11 @@ commands:
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
             unzip awscliv2.zip
             sudo ./aws/install
-  install_ansible:
-    description: Install Ansible
-    steps:
-      - run:
-          name: Install Ansible
-          command: |
-            python3 -m pip install --user ansible
+  
 jobs:
+  
 
-## DEPLOY TERRAFORM CODE
-  terraform-initialize:
+  terraform-init:
     working_directory: /tmp/project
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
@@ -46,7 +33,7 @@ jobs:
           paths:
             - .
 
-  terraform-build:
+  terraform-plan:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
@@ -62,7 +49,7 @@ jobs:
           paths:
             - .
 
-  terraform-run:
+  terraform-apply:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
@@ -78,7 +65,7 @@ jobs:
           paths:
             - .
       
-  terraform-build-stop:
+  terraform-plan-destroy:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
@@ -89,14 +76,13 @@ jobs:
           command: |
             cd terraform
             terraform plan -destroy -out tfdestroy 
-          when: on_fail
       - persist_to_workspace:
           root: .
           paths:
             - .
    
 
-  terraform-stop:
+  terraform-destroy:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
@@ -105,9 +91,9 @@ jobs:
       - run:
           name: terraform destroy
           command: |
-            terraform destroy -auto-approve
-
-  build-blogzine-app:
+            cd terraform
+            terraform plan -destroy -out tfdestroy
+  build-nodejs-application:
     docker:
       - image: cimg/python:3.10
     steps:
@@ -128,16 +114,18 @@ jobs:
       - run:
           name: Build Docker image
           command: |
-            docker build -t django-ecommerce-web .
+            cd ecommerce-app  
+            docker build -t ecommerce-app .
       - run:
           name: Push to Docker Hub
           command: |
+            cd ecommerce-app
             echo "$DOCKER_PASSWORD"
             docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-            docker tag blogzine-web:latest $DOCKER_USERNAME/django-ecommerce-web
-            docker push $DOCKER_USERNAME/blogzine-web
+            docker tag $MY_APP:latest $DOCKER_USERNAME/$MY_APP
+            docker push $DOCKER_USERNAME/$MY_APP
             
-  deploy-blogzine-app:
+  deploy-ecommerce-app:
     docker:
       - image: cimg/python:3.10
     steps:
@@ -156,8 +144,8 @@ jobs:
       - run:
           name: Deploy Docker image to EKS cluster
           command: |
-            sed -i "s|IMAGE|$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$DOCKER_USERNAME/$APP:latest|g" manifest/*yaml
-            kubectl apply -f manifest/
+            sed -i "s|IMAGE|$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$DOCKER_USERNAME/$APP:latest|g" kube-manisfests/*yaml
+            kubectl apply -f kube-manisfests/
             kubectl get pods
             kubectl get services
             
@@ -183,30 +171,54 @@ jobs:
             sed -i "s|IMAGE|$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$DOCKER_USERNAME/$APP:latest|g" kubernetes/*yaml
             kubectl create namespace sock-shop
             kubectl apply -f kubernetes/
-            kubectl get services namespace=sock-shop
+            
+            
+  deploy-prometheus:
+    docker:
+      - image: cimg/python:3.10
+    steps:
+      - checkout
+      - install_awscli
+      - run:
+          name: Install kubectl
+          command: |
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            chmod +x ./kubectl
+            sudo mv ./kubectl /usr/local/bin/kubectl
+      - run:
+          name: Configure kubectl
+          command: |
+            aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER_NAME
+      - run:
+          name: Deploy Docker image to EKS cluster
+          command: |
+            sed -i "s|IMAGE|$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$DOCKER_USERNAME/$APP:latest|g" kubernetes/manifests-monitoring/*yaml
+            kubectl apply -f kubernetes/manifests-monitoring/
             
 workflows:
   version: 2
-  blogzine-deployment:
+  ecommerce-app-deployment:
     jobs:
-#       - terraform-initialize
-#       - terraform-build:
-#           requires: ["terraform-initialize"]
-#       - hold-apply:
-#           type: approval
-#           requires: ["terraform-build"]
-#       - terraform-run:
-#           requires: ["hold-apply"]
-      - terraform-build-stop
-#           requires: ["terraform-run"]
+      - terraform-init
+      - terraform-plan:
+          requires: ["terraform-init"]
+      - hold-apply:
+          type: approval
+          requires: ["terraform-plan"]
+      - terraform-apply:
+          requires: ["hold-apply"]
+      - terraform-plan-destroy:
+          requires: ["terraform-apply"]
       - hold-destroy:
           type: approval
-          requires: ["terraform-build-stop"]
-      - terraform-stop:
+          requires: ["terraform-plan-destroy"]
+      - terraform-destroy:
           requires: ["hold-destroy"]  
-#        - build-blogzine-app:
-#          requires: ["terraform-run"]
-#       - deploy-blogzine-app
-#           requires: ["terraform-run, build-blogzine-app"]
-#       - deploy-sock-shop
-#           requires: ["terraform-run, build-blogzine-app"]
+      - build-nodejs-application:
+           requires: ["terraform-apply"]
+      - deploy-nodejs-application:
+          requires: [terraform-apply, build-ecommerce-app]
+      - deploy-sock-shop:
+          requires: [terraform-apply, build-ecommerce-app]
+      - deploy-prometheus:
+          requires: [terraform-apply, build-ecommerce-app]
