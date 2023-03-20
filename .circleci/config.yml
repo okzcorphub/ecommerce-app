@@ -114,8 +114,7 @@ jobs:
       - run:
           name: Build Docker image
           command: |
-  #          cd ecommerce-app  
-            docker build -t ecommerce-app .
+              docker build -t ecommerce-app .
       - run:
           name: Push to Docker Hub
           command: |
