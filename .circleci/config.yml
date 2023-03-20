@@ -17,7 +17,7 @@ commands:
 jobs:
   
 
-  terraform-init:
+  init:
     working_directory: /tmp/project
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
@@ -33,7 +33,7 @@ jobs:
           paths:
             - .
 
-  terraform-plan:
+  plan:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
@@ -49,7 +49,7 @@ jobs:
           paths:
             - .
 
-  terraform-apply:
+  apply:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
@@ -65,7 +65,7 @@ jobs:
           paths:
             - .
       
-  terraform-plan-destroy:
+  plan-destroy:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
@@ -82,7 +82,7 @@ jobs:
             - .
    
 
-  terraform-destroy:
+  destroy:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
@@ -93,7 +93,7 @@ jobs:
           command: |
             cd terraform
             terraform plan -destroy -out tfdestroy
-  build-nodejs-application:
+  build-ecommerce-app:
     docker:
       - image: cimg/python:3.10
     steps:
@@ -149,7 +149,7 @@ jobs:
             kubectl get pods
             kubectl get services
             
-  deploy-sock-shop:
+  deploy-sock-shop-app:
     docker:
       - image: cimg/python:3.10
     steps:
@@ -170,8 +170,8 @@ jobs:
           command: |
             sed -i "s|IMAGE|$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$DOCKER_USERNAME/$APP:latest|g" kubernetes/*yaml
             kubectl create namespace sock-shop
-            kubectl apply -f kubernetes/
-            
+            kubectl apply -f kubernetes/complete-demo.yaml -n sock-shop
+            kubectl get services -n sock-shop
             
   deploy-prometheus:
     docker:
