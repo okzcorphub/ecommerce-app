@@ -201,7 +201,7 @@ workflows:
     jobs:
       - init
       - plan:
-          requires: [init"]
+          requires: [init]
       - hold-apply:
           type: approval
           requires: [plan]
