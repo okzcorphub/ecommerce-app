@@ -191,30 +191,30 @@ jobs:
             sed -i "s|IMAGE|$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$DOCKER_USERNAME/$MY_APP:latest|g" kubernetes/manifests-monitoring/*yaml
             kubectl apply -f kubernetes/manifests-monitoring/
             
-# workflows:
-#   version: 2
-#   ecommerce-app-deployment:
-#      jobs:
-#         - terra-init
-#         - terra-plan:
-#             requires: ["terra-init"]
-#         - hold-apply:
-#             type: approval
-#             requires: ["terra-plan"]
-#         - terra-apply:
-#             requires: ["hold-apply"]
-#         - terra-plan-kill:
-#             requires: ["terra-apply"]
-#         - hold-destroy:
-#             type: approval
-#             requires: ["terra-plan-kill"]
-#         - terra-kill:
-#             requires: ["hold-destroy"]  
-#         - build-ecommerce-app:
-#              requires: ["terra-apply"]
-#         - deploy-ecommerce-app:
-#             requires: [terra-apply, build-ecommerce-app]
-#         - deploy-sock-shop-app:
-#             requires: [terra-apply, build-ecommerce-app]
-#         - deploy-prometheus-app:
-#             requires: [terra-apply, build-ecommerce-app]
+workflows:
+  version: 2
+  ecommerce-app-deployment:
+     jobs:
+        - terra-init
+        - terra-plan:
+            requires: ["terra-init"]
+        - hold-apply:
+            type: approval
+            requires: ["terra-plan"]
+        - terra-apply:
+            requires: ["hold-apply"]
+        - terra-plan-kill:
+            requires: ["terra-apply"]
+        - hold-destroy:
+            type: approval
+            requires: ["terra-plan-kill"]
+        - terra-kill:
+            requires: ["hold-destroy"]  
+        - build-ecommerce-app:
+             requires: ["terra-apply"]
+        - deploy-ecommerce-app:
+            requires: [terra-apply, build-ecommerce-app]
+        - deploy-sock-shop-app:
+            requires: [terra-apply, build-ecommerce-app]
+        - deploy-prometheus-app:
+            requires: [terra-apply, build-ecommerce-app]
