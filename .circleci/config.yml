@@ -140,7 +140,7 @@ jobs:
       - run:
           name: Deploy Docker image to EKS cluster
           command: |
-            sed -i "s|IMAGE|$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$DOCKER_USERNAME/$MY_APP:latest|g" kube-manifests/*yaml
+            
             kubectl apply -f kube-manifests/
             kubectl get pods
             kubectl get services
@@ -167,7 +167,7 @@ jobs:
             sed -i "s|IMAGE|$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$DOCKER_USERNAME/$MY_APP:latest|g" kubernetes/*yaml
             kubectl create namespace sock-shop
             kubectl apply -f kubernetes/
-            kubectl get services namespace=sock-shop
+            kubectl get services -n sock-shop
             
   deploy-prometheus-app:
     docker:
